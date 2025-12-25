@@ -131,10 +131,10 @@
             <!-- HEADER -->
             <tr>
                 <th>Hour</th>
-                <th>+1</th>
                 {% for day in day_names %}
                     <th>{{ day }}</th>
                 {% endfor %}
+                <th>+1</th>
             </tr>
 
             <!-- ROWS -->
@@ -143,29 +143,16 @@
                 <!-- Hour label -->
                 <th>{{ hour }}</th>
 
-                <!-- +1 workers button for this hour -->
-                <td>
-                    <button
-                        type="button"
-                        class="hour-plus-btn"
-                        data-hour="{{ hour }}">
-                        +
-                    </button>
-                </td>
-
                 <!-- Day cells -->
                 {% for day in days %}
                     {% with workers=saved|get_item:day|get_item:hour %}
                         {% if day in closed_days %}
-                            <!-- Whole day closed -->
                             <td class="closed-hour">–</td>
 
                         {% elif hour < opening_hour or hour >= closing_hour %}
-                            <!-- Outside bar hours -->
                             <td class="closed-hour">–</td>
 
                         {% else %}
-                            <!-- Open hour -->
                             <td class="open-hour workers-{{ workers|default:1 }}"
                                 data-day="{{ day }}"
                                 data-hour="{{ hour }}"
@@ -175,6 +162,16 @@
                         {% endif %}
                     {% endwith %}
                 {% endfor %}
+
+                <!-- +1 button (LAST COLUMN) -->
+                <td>
+                    <button
+                        type="button"
+                        class="hour-plus-btn"
+                        data-hour="{{ hour }}">
+                        +1
+                    </button>
+                </td>
             </tr>
             {% endfor %}
 
@@ -182,20 +179,70 @@
     </div>
 
 
+
     <!-- RIGHT SIDE: CONTROLS -->
     <div class="controls-container">
 
         <h3>Bar Configuration</h3>
 
-        <h4>Closed Days</h4>
+    <h4>Closed Days</h4>
 
-        <label><input type="checkbox" class="closed-day-checkbox" value="0"> Mon</label><br>
-        <label><input type="checkbox" class="closed-day-checkbox" value="1"> Tue</label><br>
-        <label><input type="checkbox" class="closed-day-checkbox" value="2"> Wed</label><br>
-        <label><input type="checkbox" class="closed-day-checkbox" value="3"> Thu</label><br>
-        <label><input type="checkbox" class="closed-day-checkbox" value="4"> Fri</label><br>
-        <label><input type="checkbox" class="closed-day-checkbox" value="5"> Sat</label><br>
-        <label><input type="checkbox" class="closed-day-checkbox" value="6"> Sun</label><br>
+    <label>
+        <input type="checkbox"
+            class="closed-day-checkbox"
+            value="0"
+            {% if 0 in closed_days %}checked{% endif %}>
+        Mon
+    </label><br>
+
+    <label>
+        <input type="checkbox"
+            class="closed-day-checkbox"
+            value="1"
+            {% if 1 in closed_days %}checked{% endif %}>
+        Tue
+    </label><br>
+
+    <label>
+        <input type="checkbox"
+            class="closed-day-checkbox"
+            value="2"
+            {% if 2 in closed_days %}checked{% endif %}>
+        Wed
+    </label><br>
+
+    <label>
+        <input type="checkbox"
+            class="closed-day-checkbox"
+            value="3"
+            {% if 3 in closed_days %}checked{% endif %}>
+        Thu
+    </label><br>
+
+    <label>
+        <input type="checkbox"
+            class="closed-day-checkbox"
+            value="4"
+            {% if 4 in closed_days %}checked{% endif %}>
+        Fri
+    </label><br>
+
+    <label>
+        <input type="checkbox"
+            class="closed-day-checkbox"
+            value="5"
+            {% if 5 in closed_days %}checked{% endif %}>
+        Sat
+    </label><br>
+
+    <label>
+        <input type="checkbox"
+            class="closed-day-checkbox"
+            value="6"
+            {% if 6 in closed_days %}checked{% endif %}>
+        Sun
+    </label><br>
+
 
 
 
@@ -225,9 +272,10 @@
 
 <script>
 
-/* ============================================
+/* ======================================================
    +1 WORKER FOR ENTIRE HOUR (ALL DAYS)
-============================================ */
+   - Cycles: 1 → maxWorkers → 1
+====================================================== */
 document.querySelectorAll(".hour-plus-btn").forEach(button => {
 
     button.addEventListener("click", () => {
@@ -239,12 +287,13 @@ document.querySelectorAll(".hour-plus-btn").forEach(button => {
 
             let workers = parseInt(cell.dataset.workers || 1);
 
-            if (workers < maxWorkers) {
-                workers += 1;
-                cell.dataset.workers = workers;
-                cell.textContent = workers;
-                updateCellColor(cell, workers);
-            }
+            // Cycle instead of stopping
+            workers = workers % maxWorkers + 1;
+
+            cell.dataset.workers = workers;
+            cell.textContent = workers;
+
+            updateCellColor(cell, workers);
         });
     });
 
@@ -333,6 +382,11 @@ function saveConfig() {
         });
     });
 
+    // ✅ COLLECT CLOSED DAYS
+    const closedDays = [];
+    document.querySelectorAll(".closed-day-checkbox:checked")
+        .forEach(cb => closedDays.push(parseInt(cb.value)));
+
     fetch("", {
         method: "POST",
         headers: {
@@ -343,25 +397,20 @@ function saveConfig() {
             opening_hour: parseInt(document.getElementById("openingHour").value),
             closing_hour: parseInt(document.getElementById("closingHour").value),
             max_workers: parseInt(document.getElementById("maxWorkers").value),
+            closed_days: closedDays,   // ✅ SEND IT
             cells: cells
         })
     })
     .then(response => {
-        if (!response.ok) {
-            throw new Error("Save failed");
-        }
+        if (!response.ok) throw new Error("Save failed");
         alert("Configuration saved successfully");
     })
-    .catch(error => {
-        console.error(error);
+    .catch(err => {
+        console.error(err);
         alert("Error saving configuration");
     });
-
-    const closedDays = [];
-    document.querySelectorAll(".closed-day-checkbox:checked")
-    .forEach(cb => closedDays.push(parseInt(cb.value)));
-
 }
+
 </script>
 
 </body>
