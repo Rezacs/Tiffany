@@ -3,10 +3,11 @@ from django.db import models
 class Worker(models.Model):
     name = models.CharField(max_length=100)
     priority = models.IntegerField(default=1)
-    max_hours_per_week = models.IntegerField()
+    min_hours_per_week = models.IntegerField(default=0)
 
     def __str__(self):
         return self.name
+
 
 
 class BarConfig(models.Model):

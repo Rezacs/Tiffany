@@ -4,7 +4,7 @@ from .models import BarConfig, Worker
 class WorkerForm(forms.ModelForm):
     class Meta:
         model = Worker
-        fields = ["name", "priority", "max_hours_per_week"]
+        fields = ["name", "priority", "min_hours_per_week"]
         widgets = {
             "priority": forms.NumberInput(attrs={
                 "type": "range",

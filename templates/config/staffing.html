@@ -1,134 +1,23 @@
+{% load static %}
 {% load dict_extras %}
-
 
 <!DOCTYPE html>
 <html>
 <head>
     <title>Staffing Configuration</title>
-    <style>
-    body {
-        font-family: Arial, sans-serif;
-        margin: 20px;
-    }
-
-    h2 {
-        margin-bottom: 5px;
-    }
-
-    .page-layout {
-        display: flex;
-        gap: 30px;
-        align-items: flex-start;
-    }
-
-    /* LEFT */
-    .grid-container {
-        flex: 3;
-        overflow-x: auto;
-    }
-
-    table {
-        border-collapse: collapse;
-        user-select: none;
-    }
-
-    th, td {
-        border: 1px solid #aaa;
-        width: 42px;
-        height: 28px;
-        text-align: center;
-    }
-
-    th {
-        background: #f0f0f0;
-        font-weight: bold;
-    }
-
-    td.closed-hour {
-        background: #e0e0e0;
-        color: #999;
-    }
-
-    td.open-hour {
-        cursor: pointer;
-        font-weight: bold;
-        color: #000;
-    }
-
-    /* Worker count colors */
-    td.workers-1 { background: #cce5ff; }   /* light blue */
-    td.workers-2 { background: #b6e3b6; }   /* green */
-    td.workers-3 { background: #fff3b0; }   /* yellow */
-    td.workers-4 { background: #ffd6a5; }   /* orange */
-    td.workers-5 { background: #ffadad; }   /* red */
-
-    td.active {
-        background: #66b3ff;
-        color: #000;
-    }
-
-    /* RIGHT */
-    .controls-container {
-        flex: 1;
-        padding: 15px;
-        border: 1px solid #ccc;
-        border-radius: 6px;
-        background: #fafafa;
-    }
-
-    .control-group {
-        margin-bottom: 20px;
-    }
-
-    .control-group label {
-        display: block;
-        font-weight: bold;
-        margin-bottom: 5px;
-    }
-
-    .control-group span {
-        margin-left: 10px;
-        font-weight: bold;
-    }
-
-    .save-btn {
-        width: 100%;
-        padding: 10px;
-        font-size: 15px;
-        font-weight: bold;
-        background: #007bff;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-    }
-
-    .save-btn:hover {
-        background: #0056b3;
-    }
-
-    .hour-plus-btn {
-    width: 28px;
-    height: 28px;
-    font-weight: bold;
-    cursor: pointer;
-    }
-
-    </style>
-
+    <link rel="stylesheet" href="{% static 'css/staffing.css' %}">
 </head>
 <body>
 
 <h2>Bar Staffing Configuration</h2>
-<p>Click & drag to activate hours. Click a cell to change workers.</p>
+<p>Click a cell to change workers. Use +1 to increase workers for the whole hour.</p>
 
 <div class="page-layout">
 
-    <!-- LEFT SIDE: TABLE -->
+    <!-- LEFT: GRID -->
     <div class="grid-container">
         <table id="grid">
 
-            <!-- HEADER -->
             <tr>
                 <th>Hour</th>
                 {% for day in day_names %}
@@ -137,21 +26,14 @@
                 <th>+1</th>
             </tr>
 
-            <!-- ROWS -->
             {% for hour in hours %}
             <tr>
-                <!-- Hour label -->
                 <th>{{ hour }}</th>
 
-                <!-- Day cells -->
                 {% for day in days %}
                     {% with workers=saved|get_item:day|get_item:hour %}
-                        {% if day in closed_days %}
+                        {% if day in closed_days or hour < opening_hour or hour >= closing_hour %}
                             <td class="closed-hour">–</td>
-
-                        {% elif hour < opening_hour or hour >= closing_hour %}
-                            <td class="closed-hour">–</td>
-
                         {% else %}
                             <td class="open-hour workers-{{ workers|default:1 }}"
                                 data-day="{{ day }}"
@@ -163,14 +45,8 @@
                     {% endwith %}
                 {% endfor %}
 
-                <!-- +1 button (LAST COLUMN) -->
                 <td>
-                    <button
-                        type="button"
-                        class="hour-plus-btn"
-                        data-hour="{{ hour }}">
-                        +1
-                    </button>
+                    <button class="hour-plus-btn" data-hour="{{ hour }}">+1</button>
                 </td>
             </tr>
             {% endfor %}
@@ -178,240 +54,62 @@
         </table>
     </div>
 
-
-
-    <!-- RIGHT SIDE: CONTROLS -->
+    <!-- RIGHT: CONTROLS -->
     <div class="controls-container">
 
         <h3>Bar Configuration</h3>
 
-    <h4>Closed Days</h4>
-
-    <label>
-        <input type="checkbox"
-            class="closed-day-checkbox"
-            value="0"
-            {% if 0 in closed_days %}checked{% endif %}>
-        Mon
-    </label><br>
-
-    <label>
-        <input type="checkbox"
-            class="closed-day-checkbox"
-            value="1"
-            {% if 1 in closed_days %}checked{% endif %}>
-        Tue
-    </label><br>
-
-    <label>
-        <input type="checkbox"
-            class="closed-day-checkbox"
-            value="2"
-            {% if 2 in closed_days %}checked{% endif %}>
-        Wed
-    </label><br>
-
-    <label>
-        <input type="checkbox"
-            class="closed-day-checkbox"
-            value="3"
-            {% if 3 in closed_days %}checked{% endif %}>
-        Thu
-    </label><br>
-
-    <label>
-        <input type="checkbox"
-            class="closed-day-checkbox"
-            value="4"
-            {% if 4 in closed_days %}checked{% endif %}>
-        Fri
-    </label><br>
-
-    <label>
-        <input type="checkbox"
-            class="closed-day-checkbox"
-            value="5"
-            {% if 5 in closed_days %}checked{% endif %}>
-        Sat
-    </label><br>
-
-    <label>
-        <input type="checkbox"
-            class="closed-day-checkbox"
-            value="6"
-            {% if 6 in closed_days %}checked{% endif %}>
-        Sun
-    </label><br>
-
-
-
+        <h4>Closed Days</h4>
+        {% for i in days %}
+            <label>
+                <input type="checkbox"
+                       class="closed-day-checkbox"
+                       value="{{ i }}"
+                       {% if i in closed_days %}checked{% endif %}>
+                {{ day_names|slice:i|last }}
+            </label><br>
+        {% endfor %}
 
         <div class="control-group">
             <label>Opening Hour</label>
             <input type="range" id="openingHour" min="0" max="23" value="{{ opening_hour }}">
-            <span id="openingHourValue">{{ opening_hour }}</span>
+            <span id="openingHourValue"></span>
         </div>
 
         <div class="control-group">
             <label>Closing Hour</label>
             <input type="range" id="closingHour" min="1" max="24" value="{{ closing_hour }}">
-            <span id="closingHourValue">{{ closing_hour }}</span>
+            <span id="closingHourValue"></span>
         </div>
 
         <div class="control-group">
             <label>Max Workers per Hour</label>
             <input type="range" id="maxWorkers" min="1" max="10" value="{{ max_workers }}">
-            <span id="maxWorkersValue">{{ max_workers }}</span>
+            <span id="maxWorkersValue"></span>
         </div>
 
         <button class="save-btn" onclick="saveConfig()">Save Configuration</button>
+
+        <hr>
+
+        <h3>Workers</h3>
+        {% if workers %}
+            <ul class="worker-list">
+                {% for worker in workers %}
+                    <li>
+                        <strong>{{ worker.name }}</strong><br>
+                        Priority: {{ worker.priority }}<br>
+                        Min hours / week: {{ worker.min_hours_per_week }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No workers added yet.</p>
+        {% endif %}
     </div>
 
 </div>
 
-
-<script>
-
-/* ======================================================
-   +1 WORKER FOR ENTIRE HOUR (ALL DAYS)
-   - Cycles: 1 → maxWorkers → 1
-====================================================== */
-document.querySelectorAll(".hour-plus-btn").forEach(button => {
-
-    button.addEventListener("click", () => {
-        const hour = parseInt(button.dataset.hour);
-
-        document.querySelectorAll(
-            `.open-hour[data-hour="${hour}"]`
-        ).forEach(cell => {
-
-            let workers = parseInt(cell.dataset.workers || 1);
-
-            // Cycle instead of stopping
-            workers = workers % maxWorkers + 1;
-
-            cell.dataset.workers = workers;
-            cell.textContent = workers;
-
-            updateCellColor(cell, workers);
-        });
-    });
-
-});
-
-/* ======================================================
-   GLOBAL STATE
-====================================================== */
-let maxWorkers = parseInt(document.getElementById("maxWorkers").value);
-
-
-/* ======================================================
-   SLIDER VALUE DISPLAY
-====================================================== */
-function updateSliderValue(id) {
-    const input = document.getElementById(id);
-    const output = document.getElementById(id + "Value");
-    output.textContent = input.value;
-}
-
-["openingHour", "closingHour", "maxWorkers"].forEach(id => {
-    const input = document.getElementById(id);
-
-    updateSliderValue(id);
-
-    input.addEventListener("input", () => {
-        updateSliderValue(id);
-
-        if (id === "maxWorkers") {
-            maxWorkers = parseInt(input.value);
-        }
-    });
-});
-
-
-/* ======================================================
-   CELL COLOR HANDLING
-====================================================== */
-function updateCellColor(cell, workers) {
-    // Remove previous workers-* classes
-    cell.classList.forEach(cls => {
-        if (cls.startsWith("workers-")) {
-            cell.classList.remove(cls);
-        }
-    });
-
-    // Cap color level at 5 (5+ = red)
-    const colorLevel = Math.min(workers, 5);
-    cell.classList.add("workers-" + colorLevel);
-}
-
-
-/* ======================================================
-   GRID CELL CLICK LOGIC
-   - Click cycles worker count
-   - Color reflects worker count
-====================================================== */
-document.querySelectorAll(".open-hour").forEach(cell => {
-
-    cell.addEventListener("click", () => {
-        let workers = parseInt(cell.dataset.workers || 1);
-
-        // Cycle workers: 1 → maxWorkers → 1
-        workers = workers % maxWorkers + 1;
-
-        cell.dataset.workers = workers;
-        cell.textContent = workers;
-
-        updateCellColor(cell, workers);
-    });
-
-});
-
-
-/* ======================================================
-   SAVE CONFIGURATION
-====================================================== */
-function saveConfig() {
-    const cells = [];
-
-    document.querySelectorAll(".open-hour").forEach(cell => {
-        cells.push({
-            day: parseInt(cell.dataset.day),
-            hour: parseInt(cell.dataset.hour),
-            workers: parseInt(cell.dataset.workers)
-        });
-    });
-
-    // ✅ COLLECT CLOSED DAYS
-    const closedDays = [];
-    document.querySelectorAll(".closed-day-checkbox:checked")
-        .forEach(cb => closedDays.push(parseInt(cb.value)));
-
-    fetch("", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": "{{ csrf_token }}"
-        },
-        body: JSON.stringify({
-            opening_hour: parseInt(document.getElementById("openingHour").value),
-            closing_hour: parseInt(document.getElementById("closingHour").value),
-            max_workers: parseInt(document.getElementById("maxWorkers").value),
-            closed_days: closedDays,   // ✅ SEND IT
-            cells: cells
-        })
-    })
-    .then(response => {
-        if (!response.ok) throw new Error("Save failed");
-        alert("Configuration saved successfully");
-    })
-    .catch(err => {
-        console.error(err);
-        alert("Error saving configuration");
-    });
-}
-
-</script>
-
+<script src="{% static 'js/staffing.js' %}"></script>
 </body>
 </html>

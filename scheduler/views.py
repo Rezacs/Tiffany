@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from .models import Worker, StaffingRequirement
+from .models import Worker, StaffingRequirement, Worker
 from .forms import WorkerForm
 
 def worker_list(request):
@@ -115,6 +115,7 @@ def staffing_config_view(request):
     # -------------------------------
     # GET: RENDER PAGE
     # -------------------------------
+    workers = Worker.objects.all().order_by("-priority", "name")
     saved = {}
     for req in StaffingRequirement.objects.all():
         saved.setdefault(req.day_of_week, {})
@@ -129,6 +130,7 @@ def staffing_config_view(request):
         "max_workers": bar.max_workers_per_hour,
         "closed_days": bar.closed_days,
         "saved": saved,
+        "workers": workers,
     }
 
     return render(request, "config/staffing.html", context)

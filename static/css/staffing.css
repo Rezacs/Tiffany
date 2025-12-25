@@ -1,0 +1,95 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
+.page-layout {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+}
+
+/* GRID */
+.grid-container {
+    flex: 3;
+    overflow-x: auto;
+}
+
+table {
+    border-collapse: collapse;
+}
+
+th, td {
+    border: 1px solid #aaa;
+    width: 42px;
+    height: 28px;
+    text-align: center;
+}
+
+th {
+    background: #f0f0f0;
+}
+
+td.closed-hour {
+    background: #e0e0e0;
+    color: #999;
+}
+
+/* Worker colors */
+td.workers-1 { background: #cce5ff; }
+td.workers-2 { background: #b6e3b6; }
+td.workers-3 { background: #fff3b0; }
+td.workers-4 { background: #ffd6a5; }
+td.workers-5 { background: #ffadad; }
+
+td.open-hour {
+    cursor: pointer;
+    font-weight: bold;
+}
+
+/* CONTROLS */
+.controls-container {
+    flex: 1;
+    padding: 15px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: #fafafa;
+}
+
+.control-group {
+    margin-bottom: 15px;
+}
+
+.save-btn {
+    width: 100%;
+    padding: 10px;
+    font-weight: bold;
+    background: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.save-btn:hover {
+    background: #0056b3;
+}
+
+.hour-plus-btn {
+    width: 32px;
+    height: 28px;
+    cursor: pointer;
+}
+
+/* WORKERS */
+.worker-list {
+    list-style: none;
+    padding: 0;
+}
+
+.worker-list li {
+    background: white;
+    border: 1px solid #ddd;
+    padding: 8px;
+    margin-bottom: 6px;
+    border-radius: 4px;
+}
