@@ -70,20 +70,34 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.shortcuts import render
 import json
-from .models import StaffingRequirement
 from .models import StaffingRequirement, BarConfig
 
 
 @csrf_exempt
 def staffing_config_view(request):
+
+    # ALWAYS get or create bar config first
+    bar, _ = BarConfig.objects.get_or_create(
+        id=1,
+        defaults={
+            "opening_hour": 0,
+            "closing_hour": 24,
+            "max_workers_per_hour": 4,
+            "closed_days": []
+        }
+    )
+
+    # -------------------------------
+    # POST: SAVE CONFIGURATION
+    # -------------------------------
     if request.method == "POST":
         data = json.loads(request.body)
 
-        # Save / update bar config
-        bar, _ = BarConfig.objects.get_or_create(id=1)
+        # Update bar config
         bar.opening_hour = data["opening_hour"]
         bar.closing_hour = data["closing_hour"]
         bar.max_workers_per_hour = data["max_workers"]
+        bar.closed_days = data.get("closed_days", [])
         bar.save()
 
         # Save staffing grid
@@ -98,12 +112,9 @@ def staffing_config_view(request):
 
         return JsonResponse({"status": "ok"})
 
-    # ---------- GET ----------
-    bar = BarConfig.objects.first()
-    opening_hour = bar.opening_hour if bar else 0
-    closing_hour = bar.closing_hour if bar else 24
-    max_workers = bar.max_workers_per_hour if bar else 4
-
+    # -------------------------------
+    # GET: RENDER PAGE
+    # -------------------------------
     saved = {}
     for req in StaffingRequirement.objects.all():
         saved.setdefault(req.day_of_week, {})
@@ -113,10 +124,12 @@ def staffing_config_view(request):
         "hours": range(24),
         "days": range(7),
         "day_names": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-        "opening_hour": opening_hour,
-        "closing_hour": closing_hour,
-        "max_workers": max_workers,
+        "opening_hour": bar.opening_hour,
+        "closing_hour": bar.closing_hour,
+        "max_workers": bar.max_workers_per_hour,
+        "closed_days": bar.closed_days,
         "saved": saved,
     }
 
     return render(request, "config/staffing.html", context)
+

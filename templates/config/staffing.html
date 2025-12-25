@@ -50,15 +50,17 @@
     }
 
     td.open-hour {
-        background: #cce5ff;   /* 1 worker */
         cursor: pointer;
         font-weight: bold;
-    }
-
-    td.multi-worker {
-        background: #66b3ff;   /* >1 workers */
         color: #000;
     }
+
+    /* Worker count colors */
+    td.workers-1 { background: #cce5ff; }   /* light blue */
+    td.workers-2 { background: #b6e3b6; }   /* green */
+    td.workers-3 { background: #fff3b0; }   /* yellow */
+    td.workers-4 { background: #ffd6a5; }   /* orange */
+    td.workers-5 { background: #ffadad; }   /* red */
 
     td.active {
         background: #66b3ff;
@@ -104,6 +106,14 @@
     .save-btn:hover {
         background: #0056b3;
     }
+
+    .hour-plus-btn {
+    width: 28px;
+    height: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    }
+
     </style>
 
 </head>
@@ -117,23 +127,46 @@
     <!-- LEFT SIDE: TABLE -->
     <div class="grid-container">
         <table id="grid">
+
+            <!-- HEADER -->
             <tr>
                 <th>Hour</th>
+                <th>+1</th>
                 {% for day in day_names %}
                     <th>{{ day }}</th>
                 {% endfor %}
             </tr>
 
+            <!-- ROWS -->
             {% for hour in hours %}
             <tr>
+                <!-- Hour label -->
                 <th>{{ hour }}</th>
 
+                <!-- +1 workers button for this hour -->
+                <td>
+                    <button
+                        type="button"
+                        class="hour-plus-btn"
+                        data-hour="{{ hour }}">
+                        +
+                    </button>
+                </td>
+
+                <!-- Day cells -->
                 {% for day in days %}
                     {% with workers=saved|get_item:day|get_item:hour %}
-                        {% if hour < opening_hour or hour >= closing_hour %}
+                        {% if day in closed_days %}
+                            <!-- Whole day closed -->
                             <td class="closed-hour">–</td>
+
+                        {% elif hour < opening_hour or hour >= closing_hour %}
+                            <!-- Outside bar hours -->
+                            <td class="closed-hour">–</td>
+
                         {% else %}
-                            <td class="open-hour {% if workers|default:1 > 1 %}multi-worker{% endif %}"
+                            <!-- Open hour -->
+                            <td class="open-hour workers-{{ workers|default:1 }}"
                                 data-day="{{ day }}"
                                 data-hour="{{ hour }}"
                                 data-workers="{{ workers|default:1 }}">
@@ -144,13 +177,27 @@
                 {% endfor %}
             </tr>
             {% endfor %}
+
         </table>
     </div>
+
 
     <!-- RIGHT SIDE: CONTROLS -->
     <div class="controls-container">
 
         <h3>Bar Configuration</h3>
+
+        <h4>Closed Days</h4>
+
+        <label><input type="checkbox" class="closed-day-checkbox" value="0"> Mon</label><br>
+        <label><input type="checkbox" class="closed-day-checkbox" value="1"> Tue</label><br>
+        <label><input type="checkbox" class="closed-day-checkbox" value="2"> Wed</label><br>
+        <label><input type="checkbox" class="closed-day-checkbox" value="3"> Thu</label><br>
+        <label><input type="checkbox" class="closed-day-checkbox" value="4"> Fri</label><br>
+        <label><input type="checkbox" class="closed-day-checkbox" value="5"> Sat</label><br>
+        <label><input type="checkbox" class="closed-day-checkbox" value="6"> Sun</label><br>
+
+
 
         <div class="control-group">
             <label>Opening Hour</label>
@@ -177,17 +224,45 @@
 
 
 <script>
-/* -------------------------------
+
+/* ============================================
+   +1 WORKER FOR ENTIRE HOUR (ALL DAYS)
+============================================ */
+document.querySelectorAll(".hour-plus-btn").forEach(button => {
+
+    button.addEventListener("click", () => {
+        const hour = parseInt(button.dataset.hour);
+
+        document.querySelectorAll(
+            `.open-hour[data-hour="${hour}"]`
+        ).forEach(cell => {
+
+            let workers = parseInt(cell.dataset.workers || 1);
+
+            if (workers < maxWorkers) {
+                workers += 1;
+                cell.dataset.workers = workers;
+                cell.textContent = workers;
+                updateCellColor(cell, workers);
+            }
+        });
+    });
+
+});
+
+/* ======================================================
    GLOBAL STATE
--------------------------------- */
+====================================================== */
 let maxWorkers = parseInt(document.getElementById("maxWorkers").value);
 
-/* -------------------------------
+
+/* ======================================================
    SLIDER VALUE DISPLAY
--------------------------------- */
+====================================================== */
 function updateSliderValue(id) {
-    document.getElementById(id + "Value").textContent =
-        document.getElementById(id).value;
+    const input = document.getElementById(id);
+    const output = document.getElementById(id + "Value");
+    output.textContent = input.value;
 }
 
 ["openingHour", "closingHour", "maxWorkers"].forEach(id => {
@@ -204,11 +279,29 @@ function updateSliderValue(id) {
     });
 });
 
-/* -------------------------------
+
+/* ======================================================
+   CELL COLOR HANDLING
+====================================================== */
+function updateCellColor(cell, workers) {
+    // Remove previous workers-* classes
+    cell.classList.forEach(cls => {
+        if (cls.startsWith("workers-")) {
+            cell.classList.remove(cls);
+        }
+    });
+
+    // Cap color level at 5 (5+ = red)
+    const colorLevel = Math.min(workers, 5);
+    cell.classList.add("workers-" + colorLevel);
+}
+
+
+/* ======================================================
    GRID CELL CLICK LOGIC
-   - Clicking cycles worker count
+   - Click cycles worker count
    - Color reflects worker count
--------------------------------- */
+====================================================== */
 document.querySelectorAll(".open-hour").forEach(cell => {
 
     cell.addEventListener("click", () => {
@@ -220,21 +313,17 @@ document.querySelectorAll(".open-hour").forEach(cell => {
         cell.dataset.workers = workers;
         cell.textContent = workers;
 
-        // Color logic
-        if (workers > 1) {
-            cell.classList.add("multi-worker");
-        } else {
-            cell.classList.remove("multi-worker");
-        }
+        updateCellColor(cell, workers);
     });
 
 });
 
-/* -------------------------------
+
+/* ======================================================
    SAVE CONFIGURATION
--------------------------------- */
+====================================================== */
 function saveConfig() {
-    let cells = [];
+    const cells = [];
 
     document.querySelectorAll(".open-hour").forEach(cell => {
         cells.push({
@@ -258,18 +347,22 @@ function saveConfig() {
         })
     })
     .then(response => {
-        if (!response.ok) throw new Error("Save failed");
+        if (!response.ok) {
+            throw new Error("Save failed");
+        }
         alert("Configuration saved successfully");
     })
-    .catch(err => {
+    .catch(error => {
+        console.error(error);
         alert("Error saving configuration");
-        console.error(err);
     });
+
+    const closedDays = [];
+    document.querySelectorAll(".closed-day-checkbox:checked")
+    .forEach(cb => closedDays.push(parseInt(cb.value)));
+
 }
 </script>
-
-
-
 
 </body>
 </html>

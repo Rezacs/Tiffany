@@ -13,6 +13,8 @@ class BarConfig(models.Model):
     opening_hour = models.IntegerField(default=4)  # 0–23
     closing_hour = models.IntegerField(default=23)  # 0–23
     max_workers_per_hour = models.IntegerField(default=4)
+    closed_days = models.JSONField(default=list)  # [0, 6] = Mon & Sun closed
+
 
 
 class StaffingRequirement(models.Model):
