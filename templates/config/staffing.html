@@ -1,0 +1,247 @@
+{% load dict_extras %}
+
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Staffing Configuration</title>
+    <style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+    }
+
+    h2 {
+        margin-bottom: 5px;
+    }
+
+    .page-layout {
+        display: flex;
+        gap: 30px;
+        align-items: flex-start;
+    }
+
+    /* LEFT */
+    .grid-container {
+        flex: 3;
+        overflow-x: auto;
+    }
+
+    table {
+        border-collapse: collapse;
+        user-select: none;
+    }
+
+    th, td {
+        border: 1px solid #aaa;
+        width: 42px;
+        height: 28px;
+        text-align: center;
+    }
+
+    th {
+        background: #f0f0f0;
+        font-weight: bold;
+    }
+
+    td.closed-hour {
+        background: #e0e0e0;
+        color: #999;
+    }
+
+    td.open-hour {
+        background: #cce5ff;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    td.active {
+        background: #66b3ff;
+        color: #000;
+    }
+
+    /* RIGHT */
+    .controls-container {
+        flex: 1;
+        padding: 15px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        background: #fafafa;
+    }
+
+    .control-group {
+        margin-bottom: 20px;
+    }
+
+    .control-group label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .control-group span {
+        margin-left: 10px;
+        font-weight: bold;
+    }
+
+    .save-btn {
+        width: 100%;
+        padding: 10px;
+        font-size: 15px;
+        font-weight: bold;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .save-btn:hover {
+        background: #0056b3;
+    }
+    </style>
+
+</head>
+<body>
+
+<h2>Bar Staffing Configuration</h2>
+<p>Click & drag to activate hours. Click a cell to change workers (1–4).</p>
+
+<h2>Bar Configuration</h2>
+
+<label>
+    Opening Hour:
+    <input type="range" id="openingHour" min="0" max="23" value="{{ opening_hour }}">
+    <span id="openingValue">{{ opening_hour }}</span>
+</label>
+
+<br><br>
+
+<label>
+    Closing Hour:
+    <input type="range" id="closingHour" min="1" max="24" value="{{ closing_hour }}">
+    <span id="closingValue">{{ closing_hour }}</span>
+</label>
+
+<br><br>
+
+<label>
+    Max Workers per Hour:
+    <input type="range" id="maxWorkers" min="1" max="10" value="{{ max_workers }}">
+    <span id="maxWorkersValue">{{ max_workers }}</span>
+</label>
+
+<hr>
+
+
+<table id="grid">
+    <tr>
+        <th>Hour</th>
+        {% for day in day_names %}
+            <th>{{ day }}</th>
+        {% endfor %}
+    </tr>
+
+    {% for hour in hours %}
+    <tr>
+        <th>{{ hour }}</th>
+
+        {% for day in days %}
+            {% with workers=saved|get_item:day|get_item:hour %}
+                {% if hour < opening_hour or hour >= closing_hour %}
+                    <td class="closed-hour">–</td>
+                {% else %}
+                    <td class="open-hour {% if workers %}active{% endif %}"
+                        data-day="{{ day }}"
+                        data-hour="{{ hour }}"
+                        data-workers="{{ workers|default:1 }}">
+                        {{ workers|default:1 }}
+                    </td>
+                {% endif %}
+            {% endwith %}
+        {% endfor %}
+    </tr>
+    {% endfor %}
+</table>
+
+
+
+<br>
+<button onclick="saveConfig()">Save Configuration</button>
+
+<script>
+let isDragging = false;
+let maxWorkers = parseInt(document.getElementById("maxWorkers").value);
+
+// Slider live values
+["openingHour", "closingHour", "maxWorkers"].forEach(id => {
+    const input = document.getElementById(id);
+    const span = document.getElementById(id + "Value");
+
+    input.addEventListener("input", () => {
+        span.textContent = input.value;
+        if (id === "maxWorkers") {
+            maxWorkers = parseInt(input.value);
+        }
+    });
+});
+
+document.querySelectorAll(".open-hour").forEach(cell => {
+
+    cell.addEventListener("mousedown", () => {
+        isDragging = true;
+        cell.classList.add("active");
+    });
+
+    cell.addEventListener("mouseover", () => {
+        if (isDragging) cell.classList.add("active");
+    });
+
+    cell.addEventListener("mouseup", () => {
+        isDragging = false;
+    });
+
+    cell.addEventListener("click", () => {
+        let workers = parseInt(cell.dataset.workers || 1);
+        workers = workers % maxWorkers + 1;
+        cell.dataset.workers = workers;
+        cell.textContent = workers;
+        cell.classList.add("active");
+    });
+});
+
+document.body.addEventListener("mouseup", () => {
+    isDragging = false;
+});
+
+function saveConfig() {
+    let cells = [];
+
+    document.querySelectorAll("td.active").forEach(cell => {
+        cells.push({
+            day: parseInt(cell.dataset.day),
+            hour: parseInt(cell.dataset.hour),
+            workers: parseInt(cell.dataset.workers)
+        });
+    });
+
+    fetch("", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": "{{ csrf_token }}"
+        },
+        body: JSON.stringify({
+            opening_hour: parseInt(document.getElementById("openingHour").value),
+            closing_hour: parseInt(document.getElementById("closingHour").value),
+            max_workers: parseInt(document.getElementById("maxWorkers").value),
+            cells: cells
+        })
+    }).then(() => alert("Configuration saved"));
+}
+</script>
+
+
+
+</body>
+</html>

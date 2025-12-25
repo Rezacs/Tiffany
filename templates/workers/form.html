@@ -1,0 +1,26 @@
+<h2>Add Worker</h2>
+
+<form method="post">
+    {% csrf_token %}
+    <label>Name</label>
+    {{ form.name }}
+
+    <label>Priority</label>
+    {{ form.priority }}
+    <span id="priority-value"></span>
+
+    <label>Max hours per week</label>
+    {{ form.max_hours_per_week }}
+
+    <button type="submit">Save</button>
+</form>
+
+<script>
+const slider = document.querySelector("#id_priority");
+const output = document.querySelector("#priority-value");
+output.innerHTML = slider.value;
+
+slider.oninput = function() {
+  output.innerHTML = this.value;
+}
+</script>

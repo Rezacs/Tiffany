@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Workers</title>
+</head>
+<body>
+
+<h2>Workers</h2>
+
+<a href="/workers/add/">Add Worker</a>
+
+<ul>
+{% for worker in workers %}
+    <li>
+        {{ worker.name }} |
+        Priority: {{ worker.priority }} |
+        Max hours: {{ worker.max_hours_per_week }}
+    </li>
+{% empty %}
+    <li>No workers yet</li>
+{% endfor %}
+</ul>
+
+</body>
+</html>

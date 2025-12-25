@@ -1,0 +1,32 @@
+<h2>Weekly Staffing</h2>
+
+<form method="post">
+{% csrf_token %}
+
+<table border="1">
+<tr>
+    <th>Hour</th>
+    {% for d in days %}
+        <th>Day {{ d }}</th>
+    {% endfor %}
+</tr>
+
+{% for h in hours %}
+<tr>
+    <td>{{ h }}:00</td>
+    {% for d in days %}
+    <td>
+        <select name="d{{ d }}_h{{ h }}">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+        </select>
+    </td>
+    {% endfor %}
+</tr>
+{% endfor %}
+</table>
+
+<button type="submit">Save</button>
+</form>
