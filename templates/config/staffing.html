@@ -50,9 +50,14 @@
     }
 
     td.open-hour {
-        background: #cce5ff;
+        background: #cce5ff;   /* 1 worker */
         cursor: pointer;
         font-weight: bold;
+    }
+
+    td.multi-worker {
+        background: #66b3ff;   /* >1 workers */
+        color: #000;
     }
 
     td.active {
@@ -105,119 +110,133 @@
 <body>
 
 <h2>Bar Staffing Configuration</h2>
-<p>Click & drag to activate hours. Click a cell to change workers (1–4).</p>
+<p>Click & drag to activate hours. Click a cell to change workers.</p>
 
-<h2>Bar Configuration</h2>
+<div class="page-layout">
 
-<label>
-    Opening Hour:
-    <input type="range" id="openingHour" min="0" max="23" value="{{ opening_hour }}">
-    <span id="openingValue">{{ opening_hour }}</span>
-</label>
+    <!-- LEFT SIDE: TABLE -->
+    <div class="grid-container">
+        <table id="grid">
+            <tr>
+                <th>Hour</th>
+                {% for day in day_names %}
+                    <th>{{ day }}</th>
+                {% endfor %}
+            </tr>
 
-<br><br>
+            {% for hour in hours %}
+            <tr>
+                <th>{{ hour }}</th>
 
-<label>
-    Closing Hour:
-    <input type="range" id="closingHour" min="1" max="24" value="{{ closing_hour }}">
-    <span id="closingValue">{{ closing_hour }}</span>
-</label>
+                {% for day in days %}
+                    {% with workers=saved|get_item:day|get_item:hour %}
+                        {% if hour < opening_hour or hour >= closing_hour %}
+                            <td class="closed-hour">–</td>
+                        {% else %}
+                            <td class="open-hour {% if workers|default:1 > 1 %}multi-worker{% endif %}"
+                                data-day="{{ day }}"
+                                data-hour="{{ hour }}"
+                                data-workers="{{ workers|default:1 }}">
+                                {{ workers|default:1 }}
+                            </td>
+                        {% endif %}
+                    {% endwith %}
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
 
-<br><br>
+    <!-- RIGHT SIDE: CONTROLS -->
+    <div class="controls-container">
 
-<label>
-    Max Workers per Hour:
-    <input type="range" id="maxWorkers" min="1" max="10" value="{{ max_workers }}">
-    <span id="maxWorkersValue">{{ max_workers }}</span>
-</label>
+        <h3>Bar Configuration</h3>
 
-<hr>
+        <div class="control-group">
+            <label>Opening Hour</label>
+            <input type="range" id="openingHour" min="0" max="23" value="{{ opening_hour }}">
+            <span id="openingHourValue">{{ opening_hour }}</span>
+        </div>
 
+        <div class="control-group">
+            <label>Closing Hour</label>
+            <input type="range" id="closingHour" min="1" max="24" value="{{ closing_hour }}">
+            <span id="closingHourValue">{{ closing_hour }}</span>
+        </div>
 
-<table id="grid">
-    <tr>
-        <th>Hour</th>
-        {% for day in day_names %}
-            <th>{{ day }}</th>
-        {% endfor %}
-    </tr>
+        <div class="control-group">
+            <label>Max Workers per Hour</label>
+            <input type="range" id="maxWorkers" min="1" max="10" value="{{ max_workers }}">
+            <span id="maxWorkersValue">{{ max_workers }}</span>
+        </div>
 
-    {% for hour in hours %}
-    <tr>
-        <th>{{ hour }}</th>
+        <button class="save-btn" onclick="saveConfig()">Save Configuration</button>
+    </div>
 
-        {% for day in days %}
-            {% with workers=saved|get_item:day|get_item:hour %}
-                {% if hour < opening_hour or hour >= closing_hour %}
-                    <td class="closed-hour">–</td>
-                {% else %}
-                    <td class="open-hour {% if workers %}active{% endif %}"
-                        data-day="{{ day }}"
-                        data-hour="{{ hour }}"
-                        data-workers="{{ workers|default:1 }}">
-                        {{ workers|default:1 }}
-                    </td>
-                {% endif %}
-            {% endwith %}
-        {% endfor %}
-    </tr>
-    {% endfor %}
-</table>
+</div>
 
-
-
-<br>
-<button onclick="saveConfig()">Save Configuration</button>
 
 <script>
-let isDragging = false;
+/* -------------------------------
+   GLOBAL STATE
+-------------------------------- */
 let maxWorkers = parseInt(document.getElementById("maxWorkers").value);
 
-// Slider live values
+/* -------------------------------
+   SLIDER VALUE DISPLAY
+-------------------------------- */
+function updateSliderValue(id) {
+    document.getElementById(id + "Value").textContent =
+        document.getElementById(id).value;
+}
+
 ["openingHour", "closingHour", "maxWorkers"].forEach(id => {
     const input = document.getElementById(id);
-    const span = document.getElementById(id + "Value");
+
+    updateSliderValue(id);
 
     input.addEventListener("input", () => {
-        span.textContent = input.value;
+        updateSliderValue(id);
+
         if (id === "maxWorkers") {
             maxWorkers = parseInt(input.value);
         }
     });
 });
 
+/* -------------------------------
+   GRID CELL CLICK LOGIC
+   - Clicking cycles worker count
+   - Color reflects worker count
+-------------------------------- */
 document.querySelectorAll(".open-hour").forEach(cell => {
-
-    cell.addEventListener("mousedown", () => {
-        isDragging = true;
-        cell.classList.add("active");
-    });
-
-    cell.addEventListener("mouseover", () => {
-        if (isDragging) cell.classList.add("active");
-    });
-
-    cell.addEventListener("mouseup", () => {
-        isDragging = false;
-    });
 
     cell.addEventListener("click", () => {
         let workers = parseInt(cell.dataset.workers || 1);
+
+        // Cycle workers: 1 → maxWorkers → 1
         workers = workers % maxWorkers + 1;
+
         cell.dataset.workers = workers;
         cell.textContent = workers;
-        cell.classList.add("active");
+
+        // Color logic
+        if (workers > 1) {
+            cell.classList.add("multi-worker");
+        } else {
+            cell.classList.remove("multi-worker");
+        }
     });
+
 });
 
-document.body.addEventListener("mouseup", () => {
-    isDragging = false;
-});
-
+/* -------------------------------
+   SAVE CONFIGURATION
+-------------------------------- */
 function saveConfig() {
     let cells = [];
 
-    document.querySelectorAll("td.active").forEach(cell => {
+    document.querySelectorAll(".open-hour").forEach(cell => {
         cells.push({
             day: parseInt(cell.dataset.day),
             hour: parseInt(cell.dataset.hour),
@@ -237,9 +256,18 @@ function saveConfig() {
             max_workers: parseInt(document.getElementById("maxWorkers").value),
             cells: cells
         })
-    }).then(() => alert("Configuration saved"));
+    })
+    .then(response => {
+        if (!response.ok) throw new Error("Save failed");
+        alert("Configuration saved successfully");
+    })
+    .catch(err => {
+        alert("Error saving configuration");
+        console.error(err);
+    });
 }
 </script>
+
 
 
 
